@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Asm.Driver": {
+      "commandName": "Project",
+      "commandLineArgs": "../../testfiles/preprocess/root.asm"
+    }
+  }
+}
