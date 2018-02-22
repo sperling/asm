@@ -28,8 +28,19 @@ namespace Asm.Assembler
                         {
                             ParseLabel(token);
                         }
-                        // TODO:    equ
-                        //          op
+                        else
+                        {
+                            var opToken = parser.ExpectTokenType(TokenType.Literal);
+                            // TODO:    equ, rep.
+                            if (_opTable.TryGetValue(nextToken.Text, out var opCode))
+                            {
+                                _locationCounter += opCode.Size(parser);
+                            }
+                            else 
+                            {
+                                throw new Exception($"Undefined op code {opToken.Text}");
+                            }
+                        }
                     }
                 }
             }

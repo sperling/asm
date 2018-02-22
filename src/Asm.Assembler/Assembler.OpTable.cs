@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Asm.Assembler.Parsing;
 
 namespace Asm.Assembler
 {
@@ -50,5 +51,61 @@ namespace Asm.Assembler
               FETCH0,  FETCH1,  HLT,    0,          0,         0, 0, 0,   // 1111 - HLT
             };
         */
+
+        private abstract class OpCode
+        {
+            public abstract byte Op { get; }
+            
+            public abstract int Size(Parser parser);
+
+            protected void RegNameIsValid(Token regNameToken)
+            {
+                if (_regNames.Contains(regNameToken.Text))
+                {
+                    return;
+                }
+
+                throw new Exception($"Bad register name {regNameToken.Text} on line {regNameToken.LineNumber}");
+            }
+        }
+
+        private class Nop : OpCode
+        {
+            public override byte Op => 0x00;
+            
+            public override int Size(Parser parser)
+            {
+                return 1;
+            }
+        }
+
+        private class Mov : OpCode
+        {
+            private byte _op = 0x01;
+
+            public override byte Op => _op;
+
+            public override int Size(Parser parser)
+            {
+                var dstRegToken = parser.ExpectTokenType(TokenType.Literal);
+                RegNameIsValid(dstRegToken);
+
+                parser.ExpectTokenType(TokenType.Comma);
+
+                var srcRegOrNumberToken = parser.NextToken();
+                
+            }
+        }
+
+        private static Dictionary<string, OpCode> _opTable = new Dictionary<string, OpCode>(StringComparer.OrdinalIgnoreCase)
+        {
+            { nameof(Nop), new Nop() },
+            { nameof(Mov), new Mov() }
+        };
+
+        private static HashSet<string> _regNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "a"
+        };
     }
 }

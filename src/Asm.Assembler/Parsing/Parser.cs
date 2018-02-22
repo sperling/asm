@@ -103,6 +103,17 @@ namespace Asm.Assembler.Parsing
             }
         }
 
+        public Token ExpectTokenType(TokenType expectedType)
+        {
+            var token = NextToken();
+            if (token.Type != expectedType)
+            {
+                throw new ParsingException(_filePath, _currentLineNumber, $"Expected {expectedType}");
+            }
+
+            return token;
+        }
+
         private string PreProcess(StreamReader reader, string filePath, Dictionary<string, (string fromFilePath, int fromLineNumber)> visitedIncludedFilePaths)
         {
             var sb = new StringBuilder((int)reader.BaseStream.Length);
