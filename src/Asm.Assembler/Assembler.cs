@@ -16,6 +16,7 @@ namespace Asm.Assembler
             using (var source = File.OpenText(sourcePath))
             {
                 _locationCounter = 0;
+                _opCodes.Clear();
 
                 var parser = new Parser();
                 parser.Init(source, sourcePath);

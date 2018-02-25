@@ -32,9 +32,11 @@ namespace Asm.Assembler
                         {
                             var opToken = parser.ExpectTokenType(TokenType.Literal);
                             // TODO:    equ, rep.
-                            if (_opTable.TryGetValue(nextToken.Text, out var opCode))
+                            if (_opTableFactory.TryGetValue(nextToken.Text, out var opCodeFactory))
                             {
-                                _locationCounter += opCode.Size(parser);
+                                var opCode = opCodeFactory();
+                                _locationCounter += opCode.Pass0(parser);
+                                _opCodes.Add(opCode);
                             }
                             else 
                             {

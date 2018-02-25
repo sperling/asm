@@ -54,11 +54,11 @@ namespace Asm.Assembler
 
         private abstract class OpCode
         {
-            public abstract byte Op { get; }
+            public abstract List<byte> Ops { get; }
             
-            public abstract int Size(Parser parser);
+            public abstract int Pass0(Parser parser);
 
-            protected void RegNameIsValid(Token regNameToken)
+            protected void ExpectRegName(Token regNameToken)
             {
                 if (_regNames.Contains(regNameToken.Text))
                 {
@@ -67,45 +67,177 @@ namespace Asm.Assembler
 
                 throw new Exception($"Bad register name {regNameToken.Text} on line {regNameToken.LineNumber}");
             }
+
+            protected bool TokenIsRegName(Token regNameToken) => _regNames.Contains(regNameToken.Text);
         }
 
+        // nop
         private class Nop : OpCode
         {
-            public override byte Op => 0x00;
+            private static readonly List<byte> _ops = new List<byte> { 0x00 };
+
+            public override List<byte> Ops => _ops;
             
-            public override int Size(Parser parser)
+            public override int Pass0(Parser parser)
             {
                 return 1;
             }
         }
 
+        // num256 can also be a symbol.
+        // mov a, b                 -- move from b reg to a reg
+        // mov a, [b]               -- move from memory address in b reg to a reg
+        // mov a, num256            -- move constant value to a reg
+        // mov a, [num256]          -- move memory address constant value to a reg
+        // mov [a], b               -- move from b reg to memory address in a reg
+        // mov [a], num256          -- move constant to memory address in a reg
+        // mov [a], [num256]        -- move memory address constant value to memory address in a reg
+        // mov [a], [b]             -- move memory address in b reg to memory address in a reg
+        // mov [num256], b          -- move from b reg to memory address constant value
+        // mov [num256], num256     -- move constant to memory address constant value
+        // mov [num256], [num256]   -- move memory address constant value to memory address constant value
+        // mov [num256], [b]        -- move memory address in b reg to memory address constant value
         private class Mov : OpCode
         {
-            private byte _op = 0x01;
+            private readonly List<byte> _ops = new List<byte>();
 
-            public override byte Op => _op;
+            private Token _dstToken;
+            private bool _dstTokenIsSymbol;
+            private int? _dstConstant;
+            private Token _srcToken;
+            private bool _srcTokenIsSymbol;
+            private int? _srcConstant;
 
-            public override int Size(Parser parser)
+            public override List<byte> Ops => _ops;
+
+            public override int Pass0(Parser parser)
             {
-                var dstRegToken = parser.ExpectTokenType(TokenType.Literal);
-                RegNameIsValid(dstRegToken);
+                _dstToken = parser.NextToken();
+                if (_dstToken.Type == TokenType.LeftBracket)
+                {
+                    _dstToken = parser.NextToken();
+                    parser.ExpectTokenType(TokenType.RightBracket);
+                }
+                parser.ExpectTokenType(TokenType.Comma);
+
+                _srcToken = parser.NextToken();
+
+                if (_dstToken.Type == TokenType.Literal)
+                {
+                    // must be a reg.
+                    ExpectRegName(_dstToken);
+
+                    _dstTokenIsSymbol = true;
+
+                    // mov reg, number256
+                    // mov [reg], number256
+                    // mov [number256], number256
+                    if (_srcToken.Type == TokenType.Number)
+                    {
+                        if (_dstToken.Type != TokenType.Literal && _dstToken.Type != TokenType.Number)
+                        {
+                            throw new Exception($"Expected token {_dstToken.Text}")
+                        }
+                        var srcNumberType = _srcToken.GetNumber(out var srcConstant);
+                        _srcConstant = srcConstant;
+                        if (srcNumberType == NumberType.Nibble)
+                        {
+                            return 1;
+                        }
+                        else if (srcNumberType == NumberType.Byte)
+                        {
+                            return 2;
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+                    }
+                }
+
+                /*bool dstIsReg = false;
+                var dstRegOrLeftBracketToken = parser.NextToken();
+                if (dstRegOrLeftBracketToken.Type == TokenType.Literal)
+                {
+                    dstIsReg = true;
+                    RegNameIsValid(dstRegOrLeftBracketToken);
+                }
+                else if (dstRegOrLeftBracketToken.Type == TokenType.LeftBracket)
+                {
+                    var dstRegOrNumberToken = parser.NextToken();
+                    if (dstRegOrNumberToken.Type == TokenType.Literal)
+                    {
+                        throw new NotImplementedException();
+                    }
+                    else if (dstRegOrNumberToken.Type == TokenType.Number)
+                    {
+                        throw new NotImplementedException();                    
+                    }
+                    else
+                    {
+                        throw new Exception($"Unexpected token {dstRegOrLeftBracketToken.Text} at line {dstRegOrLeftBracketToken.LineNumber}");
+                    }
+
+                    parser.ExpectTokenType(TokenType.RightBracket);
+                }
+                else
+                {
+                    throw new Exception($"Unexpected token {dstRegOrLeftBracketToken.Text} at line {dstRegOrLeftBracketToken.LineNumber}");
+                }
 
                 parser.ExpectTokenType(TokenType.Comma);
 
-                var srcRegOrNumberToken = parser.NextToken();
-                
-            }
+                var srcRegOrNumberOrLeftBracketToken = parser.NextToken();
+                if (srcRegOrNumberOrLeftBracketToken.Type == TokenType.Number)
+                {
+                    var srcConstant = srcRegOrNumberOrLeftBracketToken.ToNumber();
+                    if (srcConstant >= 0 && srcConstant <= 15)
+                    {
+                        if (dstIsReg)
+                        {
+                            _ops.Add((byte)((0x05 << 4) | (srcConstant & 7)));
+                            return 1;
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+                    }
+                    else if ((srcConstant >= 0 && srcConstant <= 255) || (srcConstant >= -128 && srcConstant <= 127))
+                    {
+                        if (dstIsReg)
+                        {
+                            _ops.Add((byte)((0x0a << 4) | (srcConstant & 127)));
+                            return 2;
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+                    }
+                    else
+                    {
+                        throw new NotImplementedException();
+                    }
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }*/
+            }            
         }
 
-        private static Dictionary<string, OpCode> _opTable = new Dictionary<string, OpCode>(StringComparer.OrdinalIgnoreCase)
+        private static Dictionary<string, Func<OpCode>> _opTableFactory = new Dictionary<string, Func<OpCode>>(StringComparer.OrdinalIgnoreCase)
         {
-            { nameof(Nop), new Nop() },
-            { nameof(Mov), new Mov() }
+            { nameof(Nop), () => new Nop() },
+            { nameof(Mov), () => new Mov() }
         };
 
         private static HashSet<string> _regNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "a"
         };
+
+        private readonly List<OpCode> _opCodes = new List<OpCode>();
     }
 }
