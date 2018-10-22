@@ -37,13 +37,8 @@ namespace Asm.Assembler
                             if (_opTableFactory.TryGetValue(nextToken.Text, out var opCodeFactory))
                             {
                                 var opCode = opCodeFactory();
-<<<<<<< HEAD
                                 opCodes.Add(opCode);
                                 _locationCounter += opCode.Pass0(parser);
-=======
-                                _locationCounter += opCode.Pass0(parser);
-                                _opCodes.Add(opCode);
->>>>>>> dfb58aa3c35eb44148f0677e083d3704225f04e2
                             }
                             else 
                             {
