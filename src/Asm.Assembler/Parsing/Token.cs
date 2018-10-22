@@ -57,6 +57,25 @@ namespace Asm.Assembler.Parsing
 
             return dec;
         }
+
+        public NumberType GetNumber(out int number)
+        {
+            number = ToNumber();
+            if (number >= 0 && number <= 15)
+            {
+                return NumberType.Nibble;
+            }
+            else if (number >= byte.MinValue && number <= byte.MaxValue)
+            {
+                return NumberType.Byte;
+            }
+            else if (number >= ushort.MinValue && number <= ushort.MaxValue)
+            {
+                return NumberType.Short;
+            }
+
+            return NumberType.Int;
+        }
     }
 
     public enum TokenType
@@ -69,6 +88,16 @@ namespace Asm.Assembler.Parsing
         GreaterThan,
         Comma,
         Colon,
+        LeftBracket,
+        RightBracket,
         EOF
+    }
+
+    public enum NumberType
+    {
+        Nibble = 0,
+        Byte,
+        Short,
+        Int
     }
 }

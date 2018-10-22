@@ -23,7 +23,9 @@ namespace Asm.Assembler.Parsing
             { '<', TokenType.LessThan },
             { '>', TokenType.GreaterThan },
             { ',', TokenType.Comma },
-            { ':', TokenType.Colon }
+            { ':', TokenType.Colon },
+            { '[', TokenType.LeftBracket },
+            { ']', TokenType.RightBracket }
         };
 
         public void Init(StreamReader reader, string filePath)
