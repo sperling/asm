@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
 using Asm.Assembler.Parsing;
 
 namespace Asm.Assembler
@@ -53,10 +54,10 @@ namespace Asm.Assembler
         */
 
         private abstract class OpCode
-        {
-            public abstract byte Op { get; }
-            
-            public abstract int Size(Parser parser);
+        {            
+            public abstract int Pass0(Parser parser);
+
+            public abstract void Pass1(Stream stream);
 
             protected void RegNameIsValid(Token regNameToken)
             {
@@ -69,38 +70,64 @@ namespace Asm.Assembler
             }
         }
 
+        // nop
         private class Nop : OpCode
-        {
-            public override byte Op => 0x00;
-            
-            public override int Size(Parser parser)
+        {            
+            public override int Pass0(Parser parser)
             {
                 return 1;
             }
-        }
 
-        private class Mov : OpCode
-        {
-            private byte _op = 0x01;
-
-            public override byte Op => _op;
-
-            public override int Size(Parser parser)
+            public override void Pass1(Stream stream)
             {
-                var dstRegToken = parser.ExpectTokenType(TokenType.Literal);
-                RegNameIsValid(dstRegToken);
-
-                parser.ExpectTokenType(TokenType.Comma);
-
-                var srcRegOrNumberToken = parser.NextToken();
-                
+                stream.Emit8(0x00);
             }
         }
 
-        private static Dictionary<string, OpCode> _opTable = new Dictionary<string, OpCode>(StringComparer.OrdinalIgnoreCase)
+        // ldsp absolute
+        // ldsp const symbol
+        private class Ldsp : OpCode
         {
-            { nameof(Nop), new Nop() },
-            { nameof(Mov), new Mov() }
+            private int _absolute;
+            private Token _symbol;
+
+            public override int Pass0(Parser parser)
+            {
+                var token = parser.NextToken();
+                if (token.Type == TokenType.Number)
+                {
+                    _absolute = token.ToNumber();
+                }
+                /*else if (token.Type == const symbol) 
+                {
+
+                }*/
+                else 
+                {
+                    throw new Exception("TODO: should be number or symbol");
+                }
+                return 3;
+            }
+
+            public override void Pass1(Stream stream)
+            {
+                stream.Emit8(0x01);
+
+                if (_symbol != null)
+                {
+                    // TODO:    
+                }
+                else 
+                {
+                    stream.Emit16(_absolute);
+                }
+            }
+        }
+
+        private static Dictionary<string, Func<OpCode>> _opTableFactory = new Dictionary<string, Func<OpCode>>(StringComparer.OrdinalIgnoreCase)
+        {
+            { nameof(Nop), () => new Nop() },
+            { nameof(Ldsp), () => new Ldsp() }
         };
 
         private static HashSet<string> _regNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

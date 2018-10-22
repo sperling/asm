@@ -1,12 +1,14 @@
 ﻿using Asm.Assembler.Parsing;
 using System;
+using System.Collections.Generic;
 
 namespace Asm.Assembler
 {
     public partial class Assembler
     {
-		private void Pass0(Parser parser)
+		private List<OpCode> Pass0(Parser parser)
         {
+            var opCodes = new List<OpCode>();
             while (true)
             {
                 var token = parser.NextToken();
@@ -32,9 +34,11 @@ namespace Asm.Assembler
                         {
                             var opToken = parser.ExpectTokenType(TokenType.Literal);
                             // TODO:    equ, rep.
-                            if (_opTable.TryGetValue(nextToken.Text, out var opCode))
+                            if (_opTableFactory.TryGetValue(nextToken.Text, out var opCodeFactory))
                             {
-                                _locationCounter += opCode.Size(parser);
+                                var opCode = opCodeFactory();
+                                opCodes.Add(opCode);
+                                _locationCounter += opCode.Pass0(parser);
                             }
                             else 
                             {
@@ -44,6 +48,8 @@ namespace Asm.Assembler
                     }
                 }
             }
+
+            return opCodes;
         }
 
         private void ParseLabel(Token symbolToken)

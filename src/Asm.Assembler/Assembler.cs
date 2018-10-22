@@ -13,6 +13,8 @@ namespace Asm.Assembler
 
         public void Generate(string sourcePath, string destinationPath)
         {
+            List<OpCode> opCodes = null;
+            
             using (var source = File.OpenText(sourcePath))
             {
                 _locationCounter = 0;
@@ -20,14 +22,18 @@ namespace Asm.Assembler
                 var parser = new Parser();
                 parser.Init(source, sourcePath);
 
-                Pass0(parser);
-                parser.Reset();
+                opCodes = Pass0(parser);
+                //parser.Reset();
 
                 if (_locationCounter > ushort.MaxValue)
                 {
                     throw new System.Exception("Program size larger than max size");
                 }
             }
+
+            Pass1(destinationPath, opCodes);
         }
+
+        
     }
 }
